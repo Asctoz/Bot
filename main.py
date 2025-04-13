@@ -63,7 +63,7 @@ def recognize_question():
 def process_with_ai(text):
     """Process input with Gemini AI model, checking for study/productivity relevance."""
     try:
-        genai.configure(api_key="AIzaSyCuPIiK0l3HXuzpeLdz5EYFHJL2p6u5FOM")
+        genai.configure(api_key="...")
         model = genai.GenerativeModel('gemini-1.5-pro')
         prompt = (
             f"Provide a detailed response to the question: {text}. --- Please do not use any other punctuation mark other than full stop and comas"
