@@ -15,11 +15,15 @@ stop_speaking = threading.Event()
 speaking = threading.Event()
 conversation_history = []
 
+MIC_INDEX = 2  # <-- your microphone index
+
+for index, name in enumerate(sr.Microphone.list_microphone_names()):
+    print(f"{index}: {name}")
+
 def recognize_speech(timeout=0.05, phrase_time_limit=5, is_activation=False, is_question=False):
-    """Recognize speech with adjustable timeout."""
     r = sr.Recognizer()
-    with sr.Microphone() as source:
-        r.dynamic_energy_threshold = True  # Auto-adjust for noise
+    with sr.Microphone(device_index=MIC_INDEX) as source:
+        r.dynamic_energy_threshold = True
         try:
             effective_timeout = 1.0 if is_activation else (0.5 if is_question else timeout)
             audio = r.listen(source, timeout=effective_timeout, phrase_time_limit=phrase_time_limit)
@@ -31,13 +35,12 @@ def recognize_speech(timeout=0.05, phrase_time_limit=5, is_activation=False, is_
             return None
 
 def recognize_question():
-    """Continuously listen and collect speech until a long enough silence is detected."""
     r = sr.Recognizer()
     full_text = []
-    silence_timeout = 2.0  # Seconds of silence to end input
-    max_total_duration = 20  # Limit to avoid endless listening
+    silence_timeout = 2.0
+    max_total_duration = 20
 
-    with sr.Microphone() as source:
+    with sr.Microphone(device_index=MIC_INDEX) as source:
         r.dynamic_energy_threshold = True
         r.pause_threshold = silence_timeout
         start_time = time.time()
@@ -61,14 +64,13 @@ def recognize_question():
         return final_text if final_text else None
 
 def process_with_ai(text):
-    """Process input with Gemini AI model, checking for study/productivity relevance."""
     try:
-        genai.configure(api_key="...")
+        genai.configure(api_key="AIzaSyCuPIiK0l3HXuzpeLdz5EYFHJL2p6u5FOM")
         model = genai.GenerativeModel('gemini-1.5-pro')
         prompt = (
             f"Provide a detailed response to the question: {text}. --- Please do not use any other punctuation mark other than full stop and comas"
             f"Context: {', '.join(conversation_history[-10:]) if conversation_history else 'none'}. "
-            "If the question is inappropriate or not related to studies or productivity, respond with 'please don’t waste your future, study'. And please do not mention or regard or even speak of the text and only follow instructions. Only respond to the :{text}"
+            "If the question is inappropriate or not related to studies or productivity, respond with 'please don’t waste your future, study'. And please do not mention or regard or even speak of the text and only follow instructions. Only respond to the :{text} Also make sure that if the users request is in any other language than english, even then you only and only respond in english. if the user asks to repond in any other language, say 'I only support English for now.'"
         )
         result = model.generate_content(prompt)
         return result.text if result.candidates else "Sorry, I can’t answer that."
@@ -77,7 +79,6 @@ def process_with_ai(text):
         return "Sorry, I can’t answer that right now."
 
 def speak_text(text):
-    """Speak text with interruption handling."""
     global tts_engine
     if stop_speaking.is_set():
         return
@@ -99,7 +100,6 @@ def speak_text(text):
         speaking.clear()
 
 def listen_for_activation():
-    """Listen for activation and questions with precise output."""
     global tts_engine
     activation_phrases = ["hey steve", "steve", "hi steve"]
     while True:
@@ -114,7 +114,6 @@ def listen_for_activation():
                 print(f"TTS stop error: {e}")
             stop_speaking.clear()
 
-            # Listen for questions
             while True:
                 print("listening for questions")
                 question_text = recognize_question()
@@ -149,7 +148,7 @@ def listen_for_activation():
                                 tts_engine.setProperty('rate', 150)
                             except Exception as e:
                                 print(f"TTS reinitialization error: {e}")
-                            break  # Exit to print "listening for questions" again
+                            break
                 else:
                     continue
 
